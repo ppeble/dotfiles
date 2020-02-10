@@ -7,7 +7,6 @@ filetype plugin indent on
 
 set encoding=utf-8
 set autoindent
-set copyindent
 set nosmartindent
 set history=10000
 set number
@@ -15,7 +14,6 @@ set background=dark
 set hidden
 set backspace=indent,eol,start
 set textwidth=0
-set nopaste
 
 set tabstop=2
 set shiftwidth=2
@@ -32,12 +30,19 @@ noremap <silent> <leader><space> :noh<cr>:call clearmatches()<cr>
 nnoremap <leader>aa :Ack<space>
 
 set cursorline
-set nowrap
+set wrap
 set noswapfile
 set bs=2
 
 set wildignore+=reports/**
 
+set winwidth=90
+set winminwidth=15
+set winheight=5
+set winminheight=5
+set winheight=999
+
+set updatetime=100
 
 " Highlight trailing whitespace
 autocmd InsertEnter * match ExtraWhitespace /\s\+\%#\@<!$/
@@ -58,9 +63,7 @@ autocmd QuickFixCmdPost *grep* cwindow
 
 :set statusline=%<%f\ (%{&ft})\ %-4(%m%)%=%-19(%3l,%02c%03V%)
 
-if &t_Co == 256
-  colorscheme Tomorrow-Night
-endif
+au VimEnter *.* hi Visual cterm=reverse ctermbg=NONE
 
 " Keymaps
 
@@ -70,31 +73,46 @@ map <silent> <LocalLeader>nr :NERDTree<CR>
 map <silent> <LocalLeader>nf :NERDTreeFind<CR>
 map <silent> <LocalLeader>t :CtrlP<CR>
 imap <C-L> <SPACE>=><SPACE>
-let NERDTreeShowHidden=1
-let g:NERDTreeWinSize = 40
 
+let NERDTreeShowHidden=1
+
+" Start vim with nerdtree open but only if no files were specified
+autocmd StdinReadPre * let s:std_in=1
+autocmd VimEnter * if argc() == 0 && !exists("s:std_in") | NERDTree | endif
+
+" Sane paste toggle, now when I paste it just...works
 let g:CommandTAcceptSelectionSplitMap=['<C-s>']
 let g:CommandTAcceptSelectionVSplitMap=['<C-v>']
 let g:CommandTCancelMap=['<Esc>', '<C-c>']
 let g:CommandTMaxHeight=10
 
-" copy and paste to clipboard
-noremap <leader>y "*y
-noremap <leader>p :set paste<CR>"*p<CR>:set nopaste<CR>
-noremap <leader>P :set paste<CR>"*P<CR>:set nopaste<CR>
-vnoremap <leader>y "*ygv
+function! WrapForTmux(s)
+  if !exists('$TMUX')
+    return a:s
+  endif
+
+  let tmux_start = "\<Esc>Ptmux;"
+  let tmux_end = "\<Esc>\\"
+
+  return tmux_start . substitute(a:s, "\<Esc>", "\<Esc>\<Esc>", 'g') . tmux_end
+endfunction
+
+let &t_SI .= WrapForTmux("\<Esc>[?2004h")
+let &t_EI .= WrapForTmux("\<Esc>[?2004l")
+
+function! XTermPasteBegin()
+  set pastetoggle=<Esc>[201~
+  set paste
+  return ""
+endfunction
+
+inoremap <special> <expr> <Esc>[200~ XTermPasteBegin()
 
 " better j,k
 noremap j gj
 noremap k gk
 noremap gj j
 noremap gk k
-
-nnoremap <C-h> <C-w>h
-nnoremap <C-j> <C-w>j
-nnoremap <C-k> <C-w>k
-nnoremap <C-l> <C-w>l
-nnoremap <C-=> <C-w>=
 
 " clean trailing whitespace
 nnoremap <leader>ww mz:%s/\s\+$//<cr>:let @/=''<cr>`z
@@ -126,6 +144,10 @@ map <leader>R :call RunNearestTest()<cr>
 map <leader>a :call RunTests('')<cr>
 map <leader>c :w\|:!script/features<cr>
 map <leader>w :w\|:!script/features --profile wip<cr>
+
+" commenting
+map <leader>cc :s/^/#/g<cr>:noh<cr>
+map <leader>cu :s/^#//g<cr>:noh<cr>
 
 function! RunTestFile(...)
     if a:0
