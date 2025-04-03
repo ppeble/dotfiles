@@ -1,8 +1,12 @@
 set nocompatible
 syntax on
 
+" Added so that by default it will do the correct bash syntax highlighting.
+" May need to remove if it causes problems for other kinds of scripts? So far
+" so good. 2020-07-16
+let g:is_bash = 1
+
 filetype off
-call pathogen#infect()
 filetype plugin indent on
 
 set encoding=utf-8
@@ -16,9 +20,10 @@ set backspace=indent,eol,start
 set textwidth=0
 
 set tabstop=2
-set shiftwidth=2
-set softtabstop=2
+set shiftwidth=0
+set softtabstop=0
 set expandtab
+set smarttab
 
 set ignorecase
 set smartcase
@@ -44,6 +49,29 @@ set winheight=999
 
 set updatetime=100
 
+set nofoldenable    " disable folding
+
+" Turn on all highlighting for go
+" let g:go_highlight_types = 1
+" let g:go_highlight_fields = 1
+" let g:go_highlight_functions = 1
+" let g:go_highlight_function_calls = 1
+" let g:go_highlight_operators = 1
+" let g:go_highlight_extra_types = 1
+" let g:go_highlight_build_constraints = 0
+" let g:go_highlight_space_tab_error = 1
+" let g:go_highlight_function_parameters = 1
+" let g:go_highlight_variable_declarations = 1
+" let g:go_highlight_variable_assignments = 1
+" let g:go_highlight_format_strings = 1
+
+" This will show ID matches in a file (like all instances of `error`). Can be
+" turned on specifically in :GoSameIds, set this to 1 to make it automatic
+let g:go_auto_sameids = 0
+
+" Change gofmt to goimports
+let g:go_fmt_command = "goimports"
+
 " Highlight trailing whitespace
 autocmd InsertEnter * match ExtraWhitespace /\s\+\%#\@<!$/
 autocmd BufRead,InsertLeave * match ExtraWhitespace /\s\+$/
@@ -66,19 +94,7 @@ autocmd QuickFixCmdPost *grep* cwindow
 au VimEnter *.* hi Visual cterm=reverse ctermbg=NONE
 
 " Keymaps
-
-nmap , \
-map <silent> <LocalLeader>nt :NERDTreeToggle<CR>
-map <silent> <LocalLeader>nr :NERDTree<CR>
-map <silent> <LocalLeader>nf :NERDTreeFind<CR>
-map <silent> <LocalLeader>t :CtrlP<CR>
 imap <C-L> <SPACE>=><SPACE>
-
-let NERDTreeShowHidden=1
-
-" Start vim with nerdtree open but only if no files were specified
-autocmd StdinReadPre * let s:std_in=1
-autocmd VimEnter * if argc() == 0 && !exists("s:std_in") | NERDTree | endif
 
 " Sane paste toggle, now when I paste it just...works
 let g:CommandTAcceptSelectionSplitMap=['<C-s>']
