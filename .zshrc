@@ -16,6 +16,12 @@ export PATH=$PATH:/usr/local/bin/
 # Set up kubectl krew
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 
+# Set up homebrew curl
+export PATH="/opt/homebrew/opt/curl/bin:$PATH"
+
+# Add istioctl
+export PATH="$HOME/.istioctl/bin:$PATH"
+
 # Brew autocomplete
 if type brew &>/dev/null; then
   FPATH=$(brew --prefix)/share/zsh/site-functions:$FPATH
