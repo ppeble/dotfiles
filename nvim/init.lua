@@ -39,3 +39,17 @@ vim.keymap.set('n', '<leader><space>', function()
   vim.cmd('noh')
   vim.cmd('call clearmatches()')
 end, { silent = true })
+
+require("codecompanion").setup({
+  strategies = {
+    chat = {
+      adapter = "copilot",
+    },
+    inline = {
+      adapter = "copilot",
+    },
+    agent = {
+      adapter = "copilot",
+    },
+  },
+})
