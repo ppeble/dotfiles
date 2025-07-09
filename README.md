@@ -7,7 +7,7 @@ A repo for my dotfiles.
 
 * `tmux`: `tmux 3.5a`
 * `zsh`: `zsh 5.9`
-* `nvim`: `v0.11.0`
+* `nvim`: `v0.11.2`
 
 ## Notes
 
