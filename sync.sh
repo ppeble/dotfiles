@@ -108,25 +108,30 @@ redact_file() {
   REDACT_IPS="${DOTFILES_REDACT_IPS:-1}" \
   awk '
     BEGIN {
-      kw = tolower(ENVIRON["REDACT_VAR_REGEX"])
-      var_re = "^[[:space:]]*(export[[:space:]]+)?[a-z_][a-z0-9_]*" kw "[a-z0-9_]*[[:space:]]*="
+      kw_re = tolower(ENVIRON["REDACT_VAR_REGEX"])
+      assign_re = "^[[:space:]]*(export[[:space:]]+)?[a-z_][a-z0-9_]*[[:space:]]*="
       redact_ips = (ENVIRON["REDACT_IPS"] != "0")
       ip_re = "([0-9]{1,3}\\.){3}[0-9]{1,3}"
+      rds_re = "[a-zA-Z0-9.-]+\\.rds\\.amazonaws\\.com"
     }
     {
       line = $0
       lower = tolower(line)
-      if (match(lower, var_re)) {
-        eq = index(line, "=")
-        if (eq > 0) {
-          prefix = substr(line, 1, eq - 1)
-          sub(/[[:space:]]+$/, "", prefix)
-          line = prefix "=\"REDACTED\"  # redacted by sync.sh"
+      if (match(lower, assign_re)) {
+        name = substr(lower, 1, RLENGTH)
+        sub(/[[:space:]]*=$/, "", name)
+        sub(/^[[:space:]]*(export[[:space:]]+)?/, "", name)
+        if (name ~ kw_re) {
+          eq = index(line, "=")
+          if (eq > 0) {
+            prefix = substr(line, 1, eq - 1)
+            sub(/[[:space:]]+$/, "", prefix)
+            line = prefix "=\"REDACTED\"  # redacted by sync.sh"
+          }
         }
       }
       if (redact_ips) {
-        out = ""
-        rest = line
+        out = ""; rest = line
         while (match(rest, ip_re)) {
           ip = substr(rest, RSTART, RLENGTH)
           before = substr(rest, 1, RSTART - 1)
@@ -143,6 +148,14 @@ redact_file() {
         }
         line = out rest
       }
+      out = ""; rest = line
+      while (match(rest, rds_re)) {
+        before = substr(rest, 1, RSTART - 1)
+        after  = substr(rest, RSTART + RLENGTH)
+        out = out before "REDACTED_RDS_ENDPOINT"
+        rest = after
+      }
+      line = out rest
       print line
     }
   ' "$file" > "$tmp" && mv "$tmp" "$file"
