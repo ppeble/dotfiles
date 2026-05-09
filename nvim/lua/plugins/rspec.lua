@@ -1,0 +1,5 @@
+return {
+  {
+    "keith/rspec.vim",
+  },
+}
