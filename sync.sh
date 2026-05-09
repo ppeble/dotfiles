@@ -18,6 +18,12 @@ DEFAULT_BRANCH="${DOTFILES_DEFAULT_BRANCH:-master}"
 WORKDIR="${DOTFILES_WORKDIR:-$HOME/tmp/dotfiles-sync}"
 BACKUP_ROOT="${DOTFILES_BACKUP_ROOT:-$HOME/tmp/dotfiles-sync/backups}"
 
+# Glob patterns to exclude from directory copies in either direction.
+EXCLUDES=(
+  'tmux-client-*.log'
+  '.DS_Store'
+)
+
 # Mapping of repo-relative paths to local paths.
 # Format: "repo_path::local_path". Either may be a file or a directory.
 MAPPINGS=(
@@ -82,13 +88,12 @@ copy_path() {
   [[ -e "$src" ]] || { warn "skip missing source: $src"; return 0; }
   mkdir -p "$(dirname "$dst")"
   if [[ -d "$src" ]]; then
-    if command -v rsync >/dev/null 2>&1; then
-      rsync -a --delete "$src/" "$dst/"
-    else
-      rm -rf "$dst"
-      mkdir -p "$dst"
-      cp -R "$src/." "$dst/"
-    fi
+    local rsync_args=(-a --delete)
+    local pat
+    for pat in "${EXCLUDES[@]}"; do
+      rsync_args+=(--exclude="$pat")
+    done
+    rsync "${rsync_args[@]}" "$src/" "$dst/"
   else
     cp -p "$src" "$dst"
   fi
@@ -275,7 +280,12 @@ cmd_restore() {
     if (( dry_run )); then
       if [[ -d "$src" ]]; then
         if [[ -d "$local_path" ]]; then
-          rsync -ain --delete "$src/" "$local_path/" \
+          local rsync_args=(-ain --delete)
+          local pat
+          for pat in "${EXCLUDES[@]}"; do
+            rsync_args+=(--exclude="$pat")
+          done
+          rsync "${rsync_args[@]}" "$src/" "$local_path/" \
             | sed "s|^|[would] $local_path/|"
         else
           printf '[would] create directory %s and populate from %s\n' "$local_path" "$rel"
