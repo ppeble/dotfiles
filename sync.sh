@@ -3,7 +3,7 @@
 # sync.sh - sync local dotfiles with the ppeble/dotfiles repo
 #
 # Subcommands:
-#   update            Copy local dotfiles into a fresh clone, push a branch,
+#   backup            Copy local dotfiles into a fresh clone, push a branch,
 #                     and open a PR with the changes.
 #   restore           Copy the repo's dotfiles down to the local machine.
 #     --dry-run       Show what would be copied without writing anything.
@@ -93,7 +93,7 @@ backup_local() {
   printf '%s' "$dest"
 }
 
-cmd_update() {
+cmd_backup() {
   require git gh rsync
   local clone_dir; clone_dir="$(ensure_clone)"
 
@@ -209,10 +209,10 @@ main() {
   [[ -n "$sub" ]] || usage 1
   shift || true
   case "$sub" in
-    update)  cmd_update "$@" ;;
+    backup)  cmd_backup "$@" ;;
     restore) cmd_restore "$@" ;;
     -h|--help|help) usage 0 ;;
-    *) die "unknown subcommand: $sub (try: update, restore)" ;;
+    *) die "unknown subcommand: $sub (try: backup, restore)" ;;
   esac
 }
 
