@@ -28,6 +28,21 @@ MAPPINGS=(
   "nvim::$HOME/.config/nvim"
 )
 
+# Regex (perl, case-insensitive) matching variable names whose values should
+# be scrubbed before committing. Override with DOTFILES_REDACT_VAR_REGEX.
+REDACT_VAR_REGEX="${DOTFILES_REDACT_VAR_REGEX:-(TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|ACCESS_KEY|PRIVATE_KEY|CREDENTIAL)}"
+
+# Known secret prefixes used as a post-redaction safety net. If any survive
+# after redaction, we abort the backup rather than push.
+SECRET_SIGNATURES=(
+  'xox[baprs]-'         # Slack
+  'glpat-'              # GitLab personal access token
+  'gh[pousr]_[A-Za-z0-9]{30,}'  # GitHub
+  'AKIA[0-9A-Z]{16}'    # AWS access key
+  'sk_live_[0-9a-zA-Z]{20,}'    # Stripe
+  '-----BEGIN [A-Z ]*PRIVATE KEY-----'
+)
+
 log()  { printf '[sync] %s\n' "$*" >&2; }
 warn() { printf '[sync] WARN: %s\n' "$*" >&2; }
 die()  { printf '[sync] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -79,6 +94,36 @@ copy_path() {
   fi
 }
 
+redact_file() {
+  local file="$1"
+  [[ -f "$file" ]] || return 0
+  REDACT_VAR_REGEX="$REDACT_VAR_REGEX" perl -i -pe '
+    my $re = $ENV{REDACT_VAR_REGEX};
+    s/^(\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*(?:$re)[A-Za-z0-9_]*)\s*=\s*.*$/$1="REDACTED"  # redacted by sync.sh/i;
+  ' "$file"
+}
+
+redact_tree() {
+  local target="$1"
+  if [[ -d "$target" ]]; then
+    while IFS= read -r -d '' f; do
+      redact_file "$f"
+    done < <(find "$target" -type f -print0)
+  else
+    redact_file "$target"
+  fi
+}
+
+scan_for_secrets() {
+  local root="$1"
+  local pattern
+  pattern="$(IFS='|'; echo "${SECRET_SIGNATURES[*]}")"
+  if grep -RInE "$pattern" "$root" >&2; then
+    return 1
+  fi
+  return 0
+}
+
 backup_local() {
   local stamp; stamp="$(date +%Y%m%d-%H%M%S)"
   local dest="$BACKUP_ROOT/$stamp"
@@ -95,7 +140,7 @@ backup_local() {
 }
 
 cmd_backup() {
-  require git gh rsync
+  require git gh rsync perl grep find
   local clone_dir; clone_dir="$(ensure_clone)"
 
   local backup_dir; backup_dir="$(backup_local)"
@@ -111,6 +156,16 @@ cmd_backup() {
     fi
     copy_path "$local_path" "$clone_dir/$rel"
   done
+
+  log "redacting secrets in synced files (pattern: $REDACT_VAR_REGEX)"
+  for entry in "${MAPPINGS[@]}"; do
+    local rel="${entry%%::*}"
+    redact_tree "$clone_dir/$rel"
+  done
+
+  if ! scan_for_secrets "$clone_dir"; then
+    die "post-redaction scan found suspected secrets above. Refusing to push. Adjust DOTFILES_REDACT_VAR_REGEX or scrub the source file, then retry."
+  fi
 
   if git -C "$clone_dir" diff --quiet && git -C "$clone_dir" diff --cached --quiet; then
     if [[ -z "$(git -C "$clone_dir" status --porcelain)" ]]; then
