@@ -30,7 +30,7 @@ MAPPINGS=(
 
 # Regex (perl, case-insensitive) matching variable names whose values should
 # be scrubbed before committing. Override with DOTFILES_REDACT_VAR_REGEX.
-REDACT_VAR_REGEX="${DOTFILES_REDACT_VAR_REGEX:-(TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|ACCESS_KEY|PRIVATE_KEY|CREDENTIAL)}"
+REDACT_VAR_REGEX="${DOTFILES_REDACT_VAR_REGEX:-(TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|ACCESS_KEY|PRIVATE_KEY|CREDENTIAL|SLACK_TEAM)}"
 
 # Known secret prefixes used as a post-redaction safety net. If any survive
 # after redaction, we abort the backup rather than push.
