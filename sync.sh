@@ -12,7 +12,7 @@
 #
 set -euo pipefail
 
-REPO_URL="${DOTFILES_REPO_URL:-https://github.com/ppeble/dotfiles.git}"
+REPO_URL="${DOTFILES_REPO_URL:-git@github.com:ppeble/dotfiles.git}"
 REPO_SLUG="${DOTFILES_REPO_SLUG:-ppeble/dotfiles}"
 DEFAULT_BRANCH="${DOTFILES_DEFAULT_BRANCH:-master}"
 WORKDIR="${DOTFILES_WORKDIR:-$HOME/tmp/dotfiles-sync}"
@@ -48,6 +48,7 @@ ensure_clone() {
   local clone_dir="$WORKDIR/dotfiles"
   if [[ -d "$clone_dir/.git" ]]; then
     log "refreshing clone at $clone_dir"
+    git -C "$clone_dir" remote set-url origin "$REPO_URL"
     git -C "$clone_dir" fetch origin --prune --quiet
     git -C "$clone_dir" checkout --quiet "$DEFAULT_BRANCH"
     git -C "$clone_dir" reset --hard --quiet "origin/$DEFAULT_BRANCH"
