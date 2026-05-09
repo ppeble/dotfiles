@@ -3,8 +3,9 @@
 # sync.sh - sync local dotfiles with the ppeble/dotfiles repo
 #
 # Subcommands:
-#   backup            Copy local dotfiles into a fresh clone, push a branch,
-#                     and open a PR with the changes.
+#   backup            Copy local dotfiles into a fresh clone and commit on a
+#                     local branch. Stops before pushing so you can review.
+#     --push          Also push the branch and open a PR via gh.
 #   restore           Copy the repo's dotfiles down to the local machine.
 #     --dry-run       Show what would be copied without writing anything.
 #
@@ -198,7 +199,20 @@ backup_local() {
 }
 
 cmd_backup() {
-  require git gh rsync awk grep find
+  local do_push=0
+  for arg in "$@"; do
+    case "$arg" in
+      --push) do_push=1 ;;
+      -h|--help) usage 0 ;;
+      *) die "unknown backup option: $arg" ;;
+    esac
+  done
+
+  if (( do_push )); then
+    require git gh rsync awk grep find
+  else
+    require git rsync awk grep find
+  fi
   local clone_dir; clone_dir="$(ensure_clone)"
 
   local backup_dir; backup_dir="$(backup_local)"
@@ -240,8 +254,24 @@ cmd_backup() {
   git -C "$clone_dir" add -A
   local summary
   summary="$(git -C "$clone_dir" diff --cached --stat | tail -n 1 || true)"
-  git -C "$clone_dir" -c user.useConfigOnly=true commit -m "Sync dotfiles from local ($stamp)" \
-    -m "Automated sync via sync.sh. ${summary}" >/dev/null
+  git -C "$clone_dir" -c user.useConfigOnly=true commit -m "Sync dotfiles from local ($stamp)" >/dev/null
+
+  if (( ! do_push )); then
+    log "committed locally on branch $branch. Nothing pushed."
+    cat >&2 <<EOF
+
+Review the diff before pushing:
+  git -C "$clone_dir" log -p -1
+  git -C "$clone_dir" diff "$DEFAULT_BRANCH..$branch"
+
+When ready, push and open a PR:
+  git -C "$clone_dir" push -u origin "$branch"
+  (cd "$clone_dir" && gh pr create --base "$DEFAULT_BRANCH" --head "$branch" --title "Sync dotfiles from local ($stamp)")
+
+Or re-run with --push to do both automatically.
+EOF
+    return 0
+  fi
 
   log "pushing branch to origin"
   git -C "$clone_dir" push --quiet -u origin "$branch"
