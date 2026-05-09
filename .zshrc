@@ -19,6 +19,9 @@ export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 # Set up homebrew curl
 export PATH="/opt/homebrew/opt/curl/bin:$PATH"
 
+# Homebrew make
+export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+
 # Add istioctl
 export PATH="$HOME/.istioctl/bin:$PATH"
 
@@ -422,11 +425,12 @@ alias bastion-staging-k8s-staging="ssh ec2-user@54.81.88.65 -A"
 alias bastion-prod-devops="ssh ec2-user@3.225.171.193 -A"
 alias bastion-prod-k8s-prod="ssh ec2-user@18.213.183.17 -A"
 alias bastion-prod-us-east="ssh ec2-user@52.2.247.123 -A"
+alias bastion-prod-infra="ssh ec2-user@52.21.253.235 -A"
 
 ## Developer Portal Helpers
 alias cells='cd $DEV_DIR/platform-automation/deployments/cells'
 alias applications='cd $DEV_DIR/platform-automation/deployments/applications'
-alias dp-db-ssh-tunnel='ssh -L 5432:developer-portal-db.cluster-cljiwqgzrnwo.us-east-1.rds.amazonaws.com:5432 ec2-user@34.234.118.120'
+alias dp-db-ssh-tunnel='ssh -L 5432:developer-portal-db.cluster-cljiwqgzrnwo.us-east-1.rds.amazonaws.com:5432 ec2-user@10.30.10.168'
 alias dp-platformsvc-prod-ssh-tunnel='ssh -L 5432:platformsvc-pg-prod.cluster-ro-cmruqscj51mc.us-east-1.rds.amazonaws.com:5432 ec2-user@bastion.platformsvc.app-us1.com'
 
 ## Multi Region Helpers
@@ -456,7 +460,7 @@ if [[ -s "$NVM_DIR/nvm.sh" ]]; then
 
   # Lazy-loading nvm + npm on node globals
   load_nvm () {
-    echo "🚨 NVM not loaded! Loading now..."
+    echo "🚨 NVM not loaded! Loading now..." >&2
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # this loads nvm
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
   }
@@ -499,3 +503,8 @@ export PATH="$PATH:/Users/ppeble/bin/apache-maven-3.9.3/bin"
 export SDKMAN_DIR="/Users/ppeble/.sdkman"
 [[ -s "/Users/ppeble/.sdkman/bin/sdkman-init.sh" ]] && source "/Users/ppeble/.sdkman/bin/sdkman-init.sh"
 export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
+
+export SLACK_BOT_TOKEN="REDACTED"  # redacted by sync.sh
+export SLACK_TEAM_ID=T02JENB1D
+
+export GITLAB_PERSONAL_ACCESS_TOKEN="REDACTED"  # redacted by sync.sh
