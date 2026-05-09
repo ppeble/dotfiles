@@ -97,10 +97,50 @@ copy_path() {
 redact_file() {
   local file="$1"
   [[ -f "$file" ]] || return 0
-  REDACT_VAR_REGEX="$REDACT_VAR_REGEX" perl -i -pe '
-    my $re = $ENV{REDACT_VAR_REGEX};
-    s/^(\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*(?:$re)[A-Za-z0-9_]*)\s*=\s*.*$/$1="REDACTED"  # redacted by sync.sh/i;
-  ' "$file"
+  local tmp
+  tmp="$(mktemp)"
+  REDACT_VAR_REGEX="$REDACT_VAR_REGEX" \
+  REDACT_IPS="${DOTFILES_REDACT_IPS:-1}" \
+  awk '
+    BEGIN {
+      kw = tolower(ENVIRON["REDACT_VAR_REGEX"])
+      var_re = "^[[:space:]]*(export[[:space:]]+)?[a-z_][a-z0-9_]*" kw "[a-z0-9_]*[[:space:]]*="
+      redact_ips = (ENVIRON["REDACT_IPS"] != "0")
+      ip_re = "([0-9]{1,3}\\.){3}[0-9]{1,3}"
+    }
+    {
+      line = $0
+      lower = tolower(line)
+      if (match(lower, var_re)) {
+        eq = index(line, "=")
+        if (eq > 0) {
+          prefix = substr(line, 1, eq - 1)
+          sub(/[[:space:]]+$/, "", prefix)
+          line = prefix "=\"REDACTED\"  # redacted by sync.sh"
+        }
+      }
+      if (redact_ips) {
+        out = ""
+        rest = line
+        while (match(rest, ip_re)) {
+          ip = substr(rest, RSTART, RLENGTH)
+          before = substr(rest, 1, RSTART - 1)
+          after  = substr(rest, RSTART + RLENGTH)
+          prev_ch = (RSTART > 1) ? substr(rest, RSTART - 1, 1) : ""
+          next_ch = substr(after, 1, 1)
+          bounded = (prev_ch !~ /[0-9.]/) && (next_ch !~ /[0-9.]/)
+          if (bounded && ip != "127.0.0.1" && ip != "0.0.0.0" && ip != "255.255.255.255") {
+            out = out before "REDACTED_IP"
+          } else {
+            out = out before ip
+          }
+          rest = after
+        }
+        line = out rest
+      }
+      print line
+    }
+  ' "$file" > "$tmp" && mv "$tmp" "$file"
 }
 
 redact_tree() {
@@ -140,7 +180,7 @@ backup_local() {
 }
 
 cmd_backup() {
-  require git gh rsync perl grep find
+  require git gh rsync awk grep find
   local clone_dir; clone_dir="$(ensure_clone)"
 
   local backup_dir; backup_dir="$(backup_local)"
